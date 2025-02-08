@@ -6,7 +6,6 @@ import cookingImage from '../assets/images/experiences/cooking.png';
 import sunriseImage from '../assets/images/experiences/sunrise.png';
 import trekImage from '../assets/images/experiences/trek.png';
 
-// Mock data for categories
 const categories = [
   {
     id: 1,
@@ -134,7 +133,7 @@ function ExperiencesPage() {
                       <span className="ml-1 text-sm text-gray-500">({experience.reviews})</span>
                     </div>
                     <div className="text-lg font-semibold">
-                      ${experience.price}
+                      Rs. {experience.price}
                       <span className="text-sm text-gray-500 ml-1">per person</span>
                     </div>
                   </div>

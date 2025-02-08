@@ -5,13 +5,18 @@ const {
   getBooking,
   createBooking,
   updateBookingStatus,
-  cancelBooking
+  cancelBooking,
+  checkAvailability,
+  calculatePrice
 } = require('../controllers/bookingController');
 
 const { protect } = require('../middleware/authMiddleware');
 
 // All routes are protected
 router.use(protect);
+
+router.post('/check-availability', checkAvailability);
+router.post('/calculate-price', calculatePrice);
 
 router.route('/')
   .get(getAllBookings)

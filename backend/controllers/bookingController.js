@@ -1,4 +1,5 @@
 const Booking = require('../models/Booking');
+const Property = require('../models/Property');
 
 // @desc    Get all bookings
 // @route   GET /api/bookings
@@ -158,10 +159,79 @@ const cancelBooking = async (req, res) => {
   }
 };
 
+// @desc    Check property availability
+// @route   POST /api/bookings/check-availability
+// @access  Private
+const checkAvailability = async (req, res) => {
+  try {
+    const { propertyId, checkIn, checkOut } = req.body;
+
+    // Find any overlapping bookings
+    const existingBookings = await Booking.find({
+      property: propertyId,
+      status: { $ne: 'cancelled' },
+      $or: [
+        {
+          checkIn: { $lte: checkOut },
+          checkOut: { $gte: checkIn }
+        }
+      ]
+    });
+
+    const isAvailable = existingBookings.length === 0;
+
+    res.status(200).json({
+      success: true,
+      data: { isAvailable }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// @desc    Calculate booking price
+// @route   POST /api/bookings/calculate-price
+// @access  Private
+const calculatePrice = async (req, res) => {
+  try {
+    const { propertyId, checkIn, checkOut } = req.body;
+    
+    const property = await Property.findById(propertyId);
+    if (!property) {
+      return res.status(404).json({
+        success: false,
+        message: 'Property not found'
+      });
+    }
+
+    const nights = Math.ceil((new Date(checkOut) - new Date(checkIn)) / (1000 * 60 * 60 * 24));
+    const totalPrice = property.price * nights;
+
+    res.status(200).json({
+      success: true,
+      data: {
+        basePrice: property.price,
+        nights,
+        totalPrice
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
 module.exports = {
   getAllBookings,
   getBooking,
   createBooking,
   updateBookingStatus,
-  cancelBooking
+  cancelBooking,
+  checkAvailability,
+  calculatePrice
 }; 

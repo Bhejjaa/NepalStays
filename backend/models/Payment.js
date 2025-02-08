@@ -10,24 +10,27 @@ const paymentSchema = new mongoose.Schema({
     type: Number,
     required: true
   },
-  paymentMethod: {
+  transactionId: {
     type: String,
     required: true,
-    enum: ['card', 'upi']
+    unique: true
   },
   status: {
     type: String,
     enum: ['pending', 'completed', 'failed'],
     default: 'pending'
   },
-  transactionId: {
-    type: String
+  paymentMethod: {
+    type: String,
+    default: 'esewa'
   },
-  paymentGatewayResponse: {
+  paymentResponse: {
     type: Object
   },
   createdAt: {
     type: Date,
     default: Date.now
   }
-}); 
+});
+
+module.exports = mongoose.model('Payment', paymentSchema); 

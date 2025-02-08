@@ -3,7 +3,6 @@ import axios from 'axios';
 const BASE_URL = import.meta.env.VITE_API_URL;
 
 // Create axios instance with default config
-// At the top of the file
 const api = axios.create({
   baseURL: BASE_URL,
   withCredentials: true,
@@ -15,9 +14,15 @@ const api = axios.create({
   maxBodyLength: Infinity
 });
 
-// Add request interceptor for debugging
+// Add request interceptor to automatically add auth token
 api.interceptors.request.use(
   (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    
+    // Debug logging
     console.log('Request being sent:', {
       url: config.url,
       method: config.method,
@@ -47,190 +52,145 @@ api.interceptors.response.use(
   }
 );
 
-
-  export const authService = {
-    login: async (email, password) => {
-      const response = await api.post('/api/auth/login', { email, password });
-      if (response.data.success) {
-        localStorage.setItem('token', response.data.user.token);
-      }
-      return response.data;
-    },
-
-    register: async ({ firstName, lastName, email, password }) => {
-      const response = await api.post('/api/auth/register', {
-        firstName,
-        lastName,
-        email,
-        password
-      });
-      if (response.data.success) {
-        localStorage.setItem('token', response.data.user.token);
-      }
-      return response.data;
-    },
-
-    handleGoogleCallback: async (token) => {
-      localStorage.setItem('token', token);
-      return { success: true };
+export const authService = {
+  login: async (email, password) => {
+    const response = await api.post('/api/auth/login', { email, password });
+    if (response.data.success) {
+      localStorage.setItem('token', response.data.user.token);
     }
-  };
+    return response.data;
+  },
 
-  export const destinationService = {
-    getAllDestinations: async () => {
-      const response = await api.get('/api/destinations');
+  register: async ({ firstName, lastName, email, password }) => {
+    const response = await api.post('/api/auth/register', {
+      firstName,
+      lastName,
+      email,
+      password
+    });
+    if (response.data.success) {
+      localStorage.setItem('token', response.data.user.token);
+    }
+    return response.data;
+  },
+
+  handleGoogleCallback: async (token) => {
+    localStorage.setItem('token', token);
+    return { success: true };
+  }
+};
+
+export const userService = {
+  getProfile: async () => {
+    try {
+      const response = await api.get('/api/users/profile');
       return response.data;
-    },
+    } catch (error) {
+      console.error('Get profile error:', error);
+      throw error;
+    }
+  },
   
-    createDestination: async (formData) => {
-      try {
-        // Log the FormData contents for debugging
-        for (let pair of formData.entries()) {
-          console.log(pair[0] + ': ' + pair[1]);
-        }
-    
-        const response = await api.post('/api/destinations', formData, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          }
-        });
-        return response.data;
-      } catch (error) {
-        console.error('API Error:', error.response?.data);
-        throw error;
-      }
-    },
-
-    updateDestination: async (id, formData) => {
-      // Remove Content-Type from default headers for FormData
-      const config = {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        }
-      };
-      const response = await api.put(`/api/destinations/${id}`, formData, config);
+  updatePassword: async (data) => {
+    try {
+      const response = await api.put('/api/users/password', data);
       return response.data;
-    },
+    } catch (error) {
+      console.error('Update password error:', error);
+      throw error;
+    }
+  },
+
+  toggleFavorite: async (data) => {
+    try {
+      const response = await api.post('/api/users/favorites', data);
+      return response.data;
+    } catch (error) {
+      console.error('Toggle favorite error:', error);
+      throw error;
+    }
+  }
+};
+
+export const propertyService = {
+  getAllProperties: async (filters = {}) => {
+    const queryString = new URLSearchParams(filters).toString();
+    const response = await api.get(`/api/properties${queryString ? `?${queryString}` : ''}`);
+    return response.data;
+  },
   
-    deleteDestination: async (id) => {
-      const response = await api.delete(`/api/destinations/${id}`);
-      return response.data;
-    },
+  getFeaturedProperties: async () => {
+    const response = await api.get('/api/properties/featured');
+    return response.data;
+  },
 
-      getPopularDestinations: async () => {
+  getProperty: async (id) => {
+    const response = await api.get(`/api/properties/${id}`);
+    return response.data;
+  },
+
+  createProperty: async (formData) => {
+    const response = await api.post('/api/properties', formData);
+    return response.data;
+  },
+
+  updateProperty: async (id, formData) => {
+    const response = await api.put(`/api/properties/${id}`, formData);
+    return response.data;
+  },
+
+  deleteProperty: async (id) => {
+    const response = await api.delete(`/api/properties/${id}`);
+    return response.data;
+  }
+};
+
+export const destinationService = {
+  getAllDestinations: async () => {
+    const response = await api.get('/api/destinations');
+    return response.data;
+  },
+
+  getPopularDestinations: async () => {
     const response = await api.get('/api/destinations/popular');
     return response.data;
   },
-  };
 
-  export const propertyService = {
-    getAllProperties: async () => {
-      try {
-        console.log('Making request to:', `${BASE_URL}/api/properties`);
-        const response = await api.get('/api/properties');
-        console.log('Raw response:', response);
-        return response.data;
-      } catch (error) {
-        console.error('getAllProperties error:', error);
-        if (error.response) {
-          console.error('Error response:', error.response.data);
-        }
-        throw error;
-      }
-    },
-    
-    getFeaturedProperties: async () => {
-      const response = await api.get('/api/properties/featured');
-      return response.data;
-    },
-    createProperty: async (formData) => {
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          throw new Error('Authentication required');
-        }
-  
-        console.log('Starting property creation request');
-        console.log('Token:', token);
-  
-        // Log the FormData contents
-        console.log('FormData contents:');
-        for (let [key, value] of formData.entries()) {
-          if (key === 'images') {
-            console.log('Image file:', value.name, value.type, value.size);
-          } else {
-            console.log(`${key}:`, value);
-          }
-        }
-  
-        const response = await api.post('/api/properties', formData, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-          timeout: 60000, // Increase timeout to 60 seconds
-          onUploadProgress: (progressEvent) => {
-            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-            console.log('Upload progress:', percentCompleted + '%');
-          }
-        });
-  
-        console.log('Response received:', response.data);
-        return response.data;
-  
-      } catch (error) {
-        console.error('Full error object:', error);
-        
-        if (error.code === 'ECONNABORTED') {
-          throw new Error('Request timed out - the upload may be too large or the connection is slow');
-        }
-        
-        if (error.response) {
-          // Server responded with an error
-          console.error('Server error response:', error.response.data);
-          throw new Error(error.response.data.message || 'Server error occurred');
-        }
-        
-        if (error.request) {
-          // Request was made but no response received
-          console.error('No response received:', error.request);
-          throw new Error('No response from server - please check your connection');
-        }
-        
-        // Something else went wrong
-        throw new Error(error.message || 'Error creating property');
-      }
-    },
-  
-    updateProperty: async (id, formData) => {
-      const response = await api.put(`/api/properties/${id}`, formData, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        }
-      });
-      return response.data;
-    },
-  
-    deleteProperty: async (id) => {
-      const response = await api.delete(`/api/properties/${id}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        }
-      });
-      return response.data;
-    },
-  
-    getProperty: async (id) => {
-      try {
-        console.log('Making request to:', `${BASE_URL}/api/properties/${id}`);
-        const response = await api.get(`/api/properties/${id}`);
-        console.log('Raw API response:', response.data);
-        return response.data;
-      } catch (error) {
-        console.error('getProperty error:', error);
-        throw error;
-      }
-    }
-  };
-  
+  createDestination: async (formData) => {
+    const response = await api.post('/api/destinations', formData);
+    return response.data;
+  },
 
-  export default api;
+  updateDestination: async (id, formData) => {
+    const response = await api.put(`/api/destinations/${id}`, formData);
+    return response.data;
+  },
+
+  deleteDestination: async (id) => {
+    const response = await api.delete(`/api/destinations/${id}`);
+    return response.data;
+  },
+  getDestination: async (id) => {
+    const response = await api.get(`/api/destinations/${id}`);
+    return response.data;
+  },
+  // Add this new method
+  getPropertiesByDestination: async (destinationId) => {
+    const response = await api.get(`/api/properties?destination=${destinationId}`);
+    return response.data;
+  }
+};
+
+export const paymentService = {
+  initiatePayment: async (bookingId) => {
+    const response = await api.post('/api/payments/initiate', { bookingId });
+    return response.data;
+  },
+
+  getPaymentStatus: async (paymentId) => {
+    const response = await api.get(`/api/payments/status/${paymentId}`);
+    return response.data;
+  }
+};
+
+export default api;

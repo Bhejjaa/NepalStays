@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { propertyService } from '../services/api';
+import { propertyService, userService } from '../services/api';
+import { toast } from 'react-toastify';
+import BookingModal from '../components/booking/BookingModal';
 
 import { 
   FiHeart, 
@@ -18,9 +20,36 @@ function PropertyPage() {
   const [property, setProperty] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
+
+  const handleToggleFavorite = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast.error('Please login to save properties');
+        navigate('/login');
+        return;
+      }
+
+      const response = await userService.toggleFavorite({ propertyId: id });
+      if (response.success) {
+        setIsFavorite(!isFavorite);
+        toast.success(isFavorite ? 'Removed from favorites' : 'Added to favorites');
+      }
+    } catch (error) {
+      console.error('Toggle favorite error:', error);
+      if (error.response?.status === 401) {
+        toast.error('Please login to save properties');
+        navigate('/login');
+      } else {
+        toast.error('Failed to update favorites');
+      }
+    }
+  };
 
   useEffect(() => {
-    const fetchProperty = async () => {
+    const fetchData = async () => {
       if (!id) {
         setError('Property ID is required');
         setLoading(false);
@@ -30,23 +59,27 @@ function PropertyPage() {
       try {
         setLoading(true);
         setError(null);
-        const response = await propertyService.getProperty(id);
-        console.log('API Response:', response); // Debug log
-
-        if (!response.success) {
-          throw new Error(response.message || 'Failed to load property');
+        const propertyResponse = await propertyService.getProperty(id);
+        if (!propertyResponse.success) {
+          throw new Error(propertyResponse.message || 'Failed to load property');
         }
+        setProperty(propertyResponse.data);
 
-        setProperty(response.data);
+        // Check if property is in user's wishlist
+        const userResponse = await userService.getProfile();
+        if (userResponse.success && userResponse.data) {
+          const favorites = userResponse.data.favorites || [];
+          setIsFavorite(favorites.some(fav => fav._id === id));
+        }
       } catch (error) {
-        console.error('Error fetching property:', error);
+        console.error('Error fetching data:', error);
         setError('Failed to load property details');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchProperty();
+    fetchData();
   }, [id]);
 
   if (loading) {
@@ -107,8 +140,16 @@ function PropertyPage() {
             <span>•</span>
             <span>{property.location}</span>
           </div>
-          <button className="flex items-center text-blue-600 hover:text-blue-700">
-            <FiHeart className="mr-1" /> Save
+          <button 
+            onClick={handleToggleFavorite}
+            className={`flex items-center ${
+              isFavorite ? 'text-red-500' : 'text-gray-500'
+            } hover:text-red-600 transition-colors duration-200`}
+          >
+            <FiHeart 
+              className={`mr-1 ${isFavorite ? 'fill-current' : ''}`} 
+            /> 
+            {isFavorite ? 'Saved' : 'Save'}
           </button>
         </div>
       </div>
@@ -173,43 +214,22 @@ function PropertyPage() {
               </div>
             </div>
 
-            <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Check-in</label>
-                  <input 
-                    type="date" 
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" 
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Check-out</label>
-                  <input 
-                    type="date" 
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" 
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Guests</label>
-                <select className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                  {[...Array(property.maxGuests || 1)].map((_, i) => (
-                    <option key={i + 1} value={i + 1}>
-                      {i + 1} {i === 0 ? 'guest' : 'guests'}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <button
-                type="submit"
-                className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-              >
-                Book Now
-              </button>
-            </form>
+            <button
+              onClick={() => setIsBookingModalOpen(true)}
+              className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            >
+              Book Now
+            </button>
           </div>
         </div>
       </div>
+
+      {/* Booking Modal */}
+      <BookingModal 
+        property={property}
+        isOpen={isBookingModalOpen}
+        onClose={() => setIsBookingModalOpen(false)}
+      />
     </div>
   );
 }

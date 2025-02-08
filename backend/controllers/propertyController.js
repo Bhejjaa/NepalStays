@@ -7,7 +7,15 @@ const { Readable } = require('stream');
 // @access  Public
 const getAllProperties = async (req, res) => {
   try {
-    const properties = await Property.find().populate('destination', 'name');
+    const filter = {};
+    
+    // Add destination filter if provided
+    if (req.query.destination) {
+      filter.destination = req.query.destination;
+    }
+
+    const properties = await Property.find(filter);
+    
     res.status(200).json({
       success: true,
       count: properties.length,

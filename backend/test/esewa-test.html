@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>eSewa Payment Test</title>
+</head>
+<body>
+    <h2>eSewa Payment Test Form</h2>
+    <form id="esewaForm" action="https://uat.esewa.com.np/epay/main" method="POST">
+        <input value="5000" name="tAmt" type="hidden">
+        <input value="5000" name="amt" type="hidden">
+        <input value="0" name="txAmt" type="hidden">
+        <input value="0" name="psc" type="hidden">
+        <input value="0" name="pdc" type="hidden">
+        <input value="EPAYTEST" name="scd" type="hidden">
+        <!-- Replace this with your actual transaction ID from the payment initiation response -->
+        <input value="NPSTAYS1738943388325mt6uu" name="pid" type="hidden">
+        <input value="http://localhost:5000/api/payments/verify" name="su" type="hidden">
+        <input value="http://localhost:5000/api/payments/verify" name="fu" type="hidden">
+        <button type="submit" style="padding: 10px 20px; background: #60B246; color: white; border: none; border-radius: 4px; cursor: pointer;">
+            Pay with eSewa
+        </button>
+    </form>
+</body>
+</html> 

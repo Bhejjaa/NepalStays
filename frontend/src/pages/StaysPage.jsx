@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { FiSearch, FiCalendar, FiUsers, FiHeart } from 'react-icons/fi';
+import { FiSearch, FiCalendar, FiUsers } from 'react-icons/fi';
 import { propertyService } from '../services/api';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import PropertyCard from '../components/PropertyCard';
 
 function StaysPage() {
-  const navigate = useNavigate();
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -23,8 +23,6 @@ function StaysPage() {
   useEffect(() => {
     fetchProperties();
   }, []);
-
-  
 
   const fetchProperties = async () => {
     try {
@@ -174,46 +172,15 @@ function StaysPage() {
       {/* Properties Grid */}
       <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
         {loading ? (
-          <div>Loading...</div>
+          <div className="flex justify-center items-center min-h-[200px]">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          </div>
+        ) : error ? (
+          <div className="text-center text-red-600 py-8">{error}</div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {properties.map((property) => (
-              <Link 
-                to={`/properties/${property._id}`}
-                key={property._id} 
-                className="group bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-300"
-              >
-                <div className="relative">
-                  <img
-                    src={property.images[0]}
-                    alt={property.name}
-                    className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                  <button 
-                    className="absolute top-3 right-3 p-2 rounded-full bg-white/90 hover:bg-white"
-                    onClick={(e) => {
-                      e.preventDefault(); // Prevent navigation
-                      // Add wishlist functionality here
-                    }}
-                  >
-                    <FiHeart className="h-5 w-5 text-gray-600" />
-                  </button>
-                </div>
-                <div className="p-4">
-                  <div className="flex justify-between items-start mb-1">
-                    <h3 className="text-lg font-medium text-gray-900 group-hover:text-blue-600">
-                      {property.name}
-                    </h3>
-                    <div className="flex items-center">
-                      <span className="text-sm font-medium text-gray-900">★ {property.rating}</span>
-                    </div>
-                  </div>
-                  <p className="text-sm text-gray-500 mb-2">{property.location}</p>
-                  <p className="text-lg font-semibold text-gray-900">
-                    Rs. {property.price}<span className="text-sm font-normal text-gray-500">/night</span>
-                  </p>
-                </div>
-              </Link>
+              <PropertyCard key={property._id} property={property} />
             ))}
           </div>
         )}

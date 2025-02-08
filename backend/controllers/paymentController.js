@@ -1,14 +1,15 @@
 const Payment = require('../models/Payment');
 const Booking = require('../models/Booking');
-const esewaService = require('../services/esewaService');
+const ESEWA_CONFIG = require('../config/esewa');
+const crypto = require('crypto');
 
 const paymentController = {
   initiatePayment: async (req, res) => {
     try {
       const { bookingId } = req.body;
+      const booking = await Booking.findById(bookingId)
+        .populate('property', 'name');
       
-      // Get booking details
-      const booking = await Booking.findById(bookingId);
       if (!booking) {
         return res.status(404).json({
           success: false,
@@ -16,26 +17,47 @@ const paymentController = {
         });
       }
 
-      // Generate eSewa payment details
-      const paymentDetails = esewaService.generatePaymentDetails(booking);
+      // Verify booking belongs to user
+      if (booking.user.toString() !== req.user.id) {
+        return res.status(401).json({
+          success: false,
+          message: 'Not authorized'
+        });
+      }
 
-      // Create payment record
+      const transactionId = `NPSTAYS${Date.now()}${Math.random().toString(36).substr(2, 5)}`;
+      
       const payment = await Payment.create({
         booking: bookingId,
         amount: booking.totalPrice,
-        paymentMethod: 'esewa',
-        status: 'pending',
-        transactionId: paymentDetails.pid
+        transactionId,
+        status: 'pending'
       });
+
+      const esewaParams = {
+        amt: booking.totalPrice,
+        pdc: 0,
+        psc: 0,
+        txAmt: 0,
+        tAmt: booking.totalPrice,
+        pid: transactionId,
+        scd: ESEWA_CONFIG.merchantId,
+        su: ESEWA_CONFIG.successUrl,
+        fu: ESEWA_CONFIG.failureUrl
+      };
 
       res.status(200).json({
         success: true,
         data: {
           paymentId: payment._id,
-          esewaParams: paymentDetails,
-          paymentUrl: process.env.NODE_ENV === 'production' 
-            ? ESEWA_CONFIG.productionUrl 
-            : ESEWA_CONFIG.testUrl
+          esewaParams,
+          paymentUrl: ESEWA_CONFIG.testUrl,
+          bookingDetails: {
+            propertyName: booking.property.name,
+            checkIn: booking.checkIn,
+            checkOut: booking.checkOut,
+            guests: booking.guests
+          }
         }
       });
     } catch (error) {
@@ -50,38 +72,88 @@ const paymentController = {
   verifyPayment: async (req, res) => {
     try {
       const { oid, amt, refId } = req.query;
+      
+      const payment = await Payment.findOne({ transactionId: oid });
+      if (!payment) {
+        throw new Error('Payment not found');
+      }
 
-      // Verify payment with eSewa
-      const verification = await esewaService.verifyPayment({
-        oid,
-        amt,
-        refId
+      // Verify with eSewa
+      const verificationData = {
+        amt: amt,
+        rid: refId,
+        pid: oid,
+        scd: ESEWA_CONFIG.merchantId
+      };
+
+      // Update payment status
+      payment.status = 'completed';
+      payment.paymentResponse = { refId, verificationData };
+      await payment.save();
+
+      // Update booking status
+      await Booking.findByIdAndUpdate(payment.booking, { 
+        status: 'confirmed',
+        updatedAt: Date.now()
       });
 
-      if (verification.success) {
-        // Update payment status
-        const payment = await Payment.findOneAndUpdate(
-          { transactionId: oid },
-          { 
-            status: 'completed',
-            paymentGatewayResponse: verification
-          },
-          { new: true }
-        );
-
-        // Update booking status
-        await Booking.findByIdAndUpdate(
-          payment.booking,
-          { status: 'confirmed' }
-        );
-
-        res.redirect(ESEWA_CONFIG.successUrl);
-      } else {
-        res.redirect(ESEWA_CONFIG.failureUrl);
-      }
+      res.redirect(`${process.env.FRONTEND_URL}/payment/success`);
     } catch (error) {
       console.error('Payment verification error:', error);
-      res.redirect(ESEWA_CONFIG.failureUrl);
+      res.redirect(`${process.env.FRONTEND_URL}/payment/failure`);
+    }
+  },
+
+  getPaymentStatus: async (req, res) => {
+    try {
+      const { paymentId } = req.params;
+      
+      const payment = await Payment.findById(paymentId)
+        .populate({
+          path: 'booking',
+          select: 'checkIn checkOut guests property',
+          populate: {
+            path: 'property',
+            select: 'name'
+          }
+        });
+
+      if (!payment) {
+        return res.status(404).json({
+          success: false,
+          message: 'Payment not found'
+        });
+      }
+
+      // Verify user owns the payment's booking
+      if (payment.booking.user.toString() !== req.user.id) {
+        return res.status(401).json({
+          success: false,
+          message: 'Not authorized'
+        });
+      }
+
+      res.status(200).json({
+        success: true,
+        data: {
+          status: payment.status,
+          amount: payment.amount,
+          transactionId: payment.transactionId,
+          createdAt: payment.createdAt,
+          bookingDetails: {
+            propertyName: payment.booking.property.name,
+            checkIn: payment.booking.checkIn,
+            checkOut: payment.booking.checkOut,
+            guests: payment.booking.guests
+          }
+        }
+      });
+    } catch (error) {
+      console.error('Get payment status error:', error);
+      res.status(500).json({
+        success: false,
+        message: error.message
+      });
     }
   }
 };

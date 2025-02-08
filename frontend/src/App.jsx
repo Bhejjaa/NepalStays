@@ -3,6 +3,7 @@ import { GoogleOAuthProvider } from '@react-oauth/google';
 import { ToastContainer } from 'react-toastify';
 import { Suspense, useState, useEffect } from 'react';
 import 'react-toastify/dist/ReactToastify.css';
+import { userService } from './services/api';
 
 // Auth Pages
 import LoginPage from './pages/LoginPage';
@@ -12,17 +13,26 @@ import AuthCallback from './components/auth/AuthCallback';
 // Main Pages
 import HomePage from './pages/HomePage';
 import DestinationsPage from './pages/DestinationsPage';
+import DestinationPage from './pages/DestinationPage';
 import StaysPage from './pages/StaysPage';
+import PropertyPage from './pages/PropertyPage';
 import AddPropertyPage from './pages/AddPropertyPage';
 import ExperiencesPage from './pages/ExperiencesPage';
 import ProfilePage from './pages/ProfilePage';
-import PropertyPage from './pages/PropertyPage';  
 
 // Admin Pages
-import AdminDestinationsPage from './pages/admin/DestinationsPage';
+import AdminDestinationsPage from './pages/DestinationsPage';
+
 
 // Layout Components
 import Navbar from './components/layout/Navbar';
+import ProtectedRoute from './components/auth/ProtectedRoute';
+import AdminRoute from './components/auth/AdminRoute';
+
+// Payment Pages
+import PaymentPage from './pages/PaymentPage';
+import PaymentSuccessPage from './pages/PaymentSuccessPage';
+import PaymentFailurePage from './pages/PaymentFailurePage';
 
 // Loading Component
 const LoadingSpinner = () => (
@@ -35,14 +45,27 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check if environment variables are loaded
-    console.log('Environment Variables:', {
-      apiUrl: import.meta.env.VITE_API_URL,
-      googleClientId: import.meta.env.VITE_GOOGLE_CLIENT_ID
-    });
-    setIsLoading(false);
+    const initializeApp = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (token) {
+          const response = await userService.getProfile();
+          if (!response.success) {
+            localStorage.removeItem('token');
+            throw new Error('Failed to fetch profile');
+          }
+        }
+      } catch (error) {
+        console.error('Initialization error:', error);
+        localStorage.removeItem('token');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+  
+    initializeApp();
   }, []);
-
+  
   if (isLoading) return <LoadingSpinner />;
 
   return (
@@ -62,19 +85,53 @@ function App() {
               pauseOnHover
             />
             <Navbar />
-            <main className="container mx-auto px-4 py-8">
+            <main>
               <Routes>
-              <Route path="/" element={<HomePage />} />
-  <Route path="/login" element={<LoginPage />} />
-  <Route path="/signup" element={<SignUpPage />} />
-  <Route path="/auth/callback" element={<AuthCallback />} />
-  <Route path="/destinations" element={<DestinationsPage />} />
-  <Route path="/admin/destinations" element={<AdminDestinationsPage />} />
-  <Route path="/stays" element={<StaysPage />} />
-  <Route path="/stays/add" element={<AddPropertyPage />} />
-  <Route path="/properties/:id" element={<PropertyPage />} />
-  <Route path="/experiences" element={<ExperiencesPage />} />
-  <Route path="/profile" element={<ProfilePage />} />
+                {/* Public Routes */}
+                <Route path="/" element={<HomePage />} />
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/signup" element={<SignUpPage />} />
+                <Route path="/auth/callback" element={<AuthCallback />} />
+                
+                {/* Destination Routes */}
+                <Route path="/destinations" element={<DestinationsPage />} />
+                <Route path="/destinations/:id" element={<DestinationPage />} />
+                
+                {/* Property Routes */}
+                <Route path="/stays" element={<StaysPage />} />
+                <Route path="/properties/:id" element={<PropertyPage />} />
+                <Route path="/stays/add" element={
+                  <ProtectedRoute>
+                    <AddPropertyPage />
+                  </ProtectedRoute>
+                } />
+
+                {/* Other Public Routes */}
+                <Route path="/experiences" element={<ExperiencesPage />} />
+
+                {/* Protected Routes */}
+                <Route path="/profile" element={
+                  <ProtectedRoute>
+                    <ProfilePage />
+                  </ProtectedRoute>
+                } />
+
+                {/* Payment Routes */}
+                <Route path="/payment/:bookingId" element={
+                  <ProtectedRoute>
+                    <PaymentPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/payment/success" element={<PaymentSuccessPage />} />
+                <Route path="/payment/failure" element={<PaymentFailurePage />} />
+
+                {/* Admin Routes */}
+                <Route path="/admin/destinations" element={
+                  <AdminRoute>
+                    <AdminDestinationsPage />
+                  </AdminRoute>
+                } />
+
               </Routes>
             </main>
           </Suspense>
