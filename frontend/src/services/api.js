@@ -14,6 +14,8 @@ const api = axios.create({
   maxBodyLength: Infinity
 });
 
+
+
 // Add request interceptor to automatically add auth token
 api.interceptors.request.use(
   (config) => {
@@ -125,8 +127,15 @@ export const propertyService = {
   },
 
   getProperty: async (id) => {
-    const response = await api.get(`/api/properties/${id}`);
-    return response.data;
+    try {
+      console.log('Fetching property:', id); // Debug log
+      const response = await api.get(`/api/properties/${id}`);
+      console.log('Property response:', response.data); // Debug log
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching property:', error);
+      throw error;
+    }
   },
 
   createProperty: async (formData) => {
@@ -142,6 +151,15 @@ export const propertyService = {
   deleteProperty: async (id) => {
     const response = await api.delete(`/api/properties/${id}`);
     return response.data;
+  },
+  getFeaturedProperties: async () => {
+    try {
+      const response = await api.get('/api/properties/featured');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching featured properties:', error);
+      throw error;
+    }
   }
 };
 

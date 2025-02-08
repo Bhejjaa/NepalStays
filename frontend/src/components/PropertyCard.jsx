@@ -3,10 +3,10 @@ import { FiHeart } from 'react-icons/fi';
 
 function PropertyCard({ property }) {
   return (
-    <Link 
-      to={`/properties/${property._id}`}
-      className="group bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-300"
-    >
+<Link 
+  to={`/stays/${property._id}`}  // Changed from /properties/ to /stays/
+  className="group bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-300"
+>
       <div className="relative">
         <img
           src={property.images[0]}

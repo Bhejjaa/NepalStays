@@ -34,6 +34,9 @@ import PaymentPage from './pages/PaymentPage';
 import PaymentSuccessPage from './pages/PaymentSuccessPage';
 import PaymentFailurePage from './pages/PaymentFailurePage';
 
+import AboutPage from './pages/AboutPage';
+
+
 // Loading Component
 const LoadingSpinner = () => (
   <div className="flex items-center justify-center min-h-screen">
@@ -65,7 +68,7 @@ function App() {
   
     initializeApp();
   }, []);
-  
+
   if (isLoading) return <LoadingSpinner />;
 
   return (
@@ -89,6 +92,8 @@ function App() {
               <Routes>
                 {/* Public Routes */}
                 <Route path="/" element={<HomePage />} />
+                <Route path="/about" element={<AboutPage />} />
+
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/signup" element={<SignUpPage />} />
                 <Route path="/auth/callback" element={<AuthCallback />} />
@@ -97,15 +102,14 @@ function App() {
                 <Route path="/destinations" element={<DestinationsPage />} />
                 <Route path="/destinations/:id" element={<DestinationPage />} />
                 
-                {/* Property Routes */}
-                <Route path="/stays" element={<StaysPage />} />
-                <Route path="/properties/:id" element={<PropertyPage />} />
-                <Route path="/stays/add" element={
-                  <ProtectedRoute>
-                    <AddPropertyPage />
-                  </ProtectedRoute>
-                } />
-
+{/* Property Routes */}
+<Route path="/stays/add" element={
+  <ProtectedRoute>
+    <AddPropertyPage />
+  </ProtectedRoute>
+} />
+<Route path="/stays/:id" element={<PropertyPage />} />
+<Route path="/stays" element={<StaysPage />} />
                 {/* Other Public Routes */}
                 <Route path="/experiences" element={<ExperiencesPage />} />
 

@@ -36,6 +36,7 @@ const getFeaturedProperties = async (req, res) => {
   try {
     const properties = await Property.find({ isFeatured: true })
       .populate('destination', 'name');
+    
     res.status(200).json({
       success: true,
       count: properties.length,
@@ -159,7 +160,8 @@ const createProperty = async (req, res) => {
       beds: Number(req.body.beds),
       baths: Number(req.body.baths),
       maxGuests: Number(req.body.maxGuests),
-      type: req.body.type
+      type: req.body.type,
+      isFeatured: req.body.isFeatured === 'true'
     };
 
     console.log('9. Creating property with data:', propertyData);

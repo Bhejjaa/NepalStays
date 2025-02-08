@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { FaRegHeart } from 'react-icons/fa';
-import { FiUser } from 'react-icons/fi';
+import { FiUser, FiMenu, FiX } from 'react-icons/fi';
 
 function Navbar() {
   const location = useLocation();
@@ -17,6 +17,10 @@ function Navbar() {
 
   const handleProfileClick = () => {
     navigate('/profile');
+  };
+
+  const toggleMenu = () => {
+    setIsOpen(!isOpen);
   };
 
   return (
@@ -45,27 +49,26 @@ function Navbar() {
           </div>
           
           <div className="flex items-center space-x-4">
-            <Link to="/wishlist" className="text-gray-500 hover:text-gray-700">
-              <FaRegHeart className="h-6 w-6" />
-            </Link>
             <button 
               onClick={handleProfileClick}
               className="text-gray-500 hover:text-gray-700 p-2 rounded-full hover:bg-gray-100 transition-colors"
             >
               <FiUser className="h-6 w-6" />
             </button>
-          </div>
-        </div>
 
-        {/* Mobile menu button */}
-        <div className="sm:hidden">
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
-          >
-            <span className="sr-only">Open main menu</span>
-            {/* Add your mobile menu icon here */}
-          </button>
+            {/* Mobile menu button */}
+            <button
+              onClick={toggleMenu}
+              className="sm:hidden inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
+            >
+              <span className="sr-only">Open main menu</span>
+              {isOpen ? (
+                <FiX className="block h-6 w-6" />
+              ) : (
+                <FiMenu className="block h-6 w-6" />
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Mobile menu */}
@@ -76,6 +79,7 @@ function Navbar() {
                 <Link
                   key={link.path}
                   to={link.path}
+                  onClick={() => setIsOpen(false)}
                   className={`block pl-3 pr-4 py-2 border-l-4 text-base font-medium ${
                     location.pathname === link.path
                       ? 'border-blue-500 text-blue-700 bg-blue-50'

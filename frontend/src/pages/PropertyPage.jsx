@@ -55,33 +55,43 @@ function PropertyPage() {
         setLoading(false);
         return;
       }
-
+  
       try {
         setLoading(true);
         setError(null);
+        console.log('Fetching property with ID:', id); // Debug log
         const propertyResponse = await propertyService.getProperty(id);
+        console.log('Property response:', propertyResponse); // Debug log
+        
         if (!propertyResponse.success) {
           throw new Error(propertyResponse.message || 'Failed to load property');
         }
         setProperty(propertyResponse.data);
-
-        // Check if property is in user's wishlist
-        const userResponse = await userService.getProfile();
-        if (userResponse.success && userResponse.data) {
-          const favorites = userResponse.data.favorites || [];
-          setIsFavorite(favorites.some(fav => fav._id === id));
+  
+        // Only try to get user wishlist if logged in
+        const token = localStorage.getItem('token');
+        if (token) {
+          try {
+            const userResponse = await userService.getProfile();
+            if (userResponse.success && userResponse.data) {
+              const favorites = userResponse.data.favorites || [];
+              setIsFavorite(favorites.some(fav => fav._id === id));
+            }
+          } catch (userError) {
+            console.error('Error fetching user profile:', userError);
+            // Don't throw error here as it's not critical
+          }
         }
       } catch (error) {
-        console.error('Error fetching data:', error);
-        setError('Failed to load property details');
+        console.error('Error fetching property:', error);
+        setError(error.message || 'Failed to load property details');
       } finally {
         setLoading(false);
       }
     };
-
+  
     fetchData();
   }, [id]);
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
